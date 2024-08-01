@@ -112,7 +112,7 @@ def main():
     try:
         logger.info(f"Current working directory: {os.getcwd()}")
 
-        input_csv_path = 'input1.csv'
+        input_csv_path = 'Untitled spreadsheet - Sheet1 (4).csv'
         output_csv_path = 'output1.csv'
         start_time = datetime.now()
         max_runtime = timedelta(hours=5, minutes=50)  # Set maximum runtime
@@ -167,7 +167,7 @@ def main():
 
                     # Save and push changes after each row
                     input_df.to_csv(input_csv_path, index=False)
-                    git_commit_and_push([input_csv_path, output_csv_path], f"Updated input1.csv and output1.csv with data for {username}")
+                    git_commit_and_push([input_csv_path, output_csv_path], f"Updated Untitled spreadsheet - Sheet1 (4).csv and output1.csv with data for {username}")
 
                 else:
                     logger.info(f"No email found for {username}")
@@ -179,7 +179,7 @@ def main():
         # Final save after loop completion
         logger.info(f"Processing complete. Final data saved to {input_csv_path}")
         input_df.to_csv(input_csv_path, index=False)
-        git_commit_and_push([input_csv_path, output_csv_path], "Final update to input1.csv and output1.csv after processing completion")
+        git_commit_and_push([input_csv_path, output_csv_path], "Final update to Untitled spreadsheet - Sheet1 (4).csv and output1.csv after processing completion")
 
     except Exception as e:
         logger.error(f"An error occurred in the main function: {e}")
