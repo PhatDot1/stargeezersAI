@@ -1,0 +1,39 @@
+name: Run GitHub Email Scraper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Running everh 6h
+  workflow_dispatch:  # Allows manual triggering of the workflow
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas
+
+      - name: Run Python Script
+        env:
+          MY_GITHUB_API_KEYS: ${{ secrets.MY_GITHUB_API_KEYS }}  # GitHub API keys for scraping
+        run: |
+          python cloud01.py
+
+      - name: Push changes back to repository
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add input1.csv output1.csv
+          git commit -m "Automated update of input1.csv and output1.csv"
+          git push https://${{ secrets.PAT_TOKEN }}@github.com/PhatDot1/stargeezers.git HEAD:main
