@@ -35,6 +35,6 @@ jobs:
 
       - name: Run Python Script
         env:
-          MY_GITHUB_API_KEYS: ${{ secrets.MY_GITHUB_API_KEYS }}  # GitHub API keys for scraping
+          MY_GITHUB_API_KEYS: ${{ secrets.MY_GITHUB_API_KEYS2 }}  # GitHub API keys for scraping
         run: |
           python GHES.py
