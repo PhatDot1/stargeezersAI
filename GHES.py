@@ -162,10 +162,17 @@ def write_to_google_sheet(sheet_id, sheet_name, data):
         'values': data
     }
     try:
-        logger.info(f"Attempting to write data to {sheet_name}. Data: {data}")
-        result = sheet.values().append(
-            spreadsheetId=sheet_id, range=f'{sheet_name}!A2',
-            valueInputOption="RAW", body=body).execute()
+        # Determine the next empty row in the sheet
+        logger.info(f"Determining the next empty row in {sheet_name}.")
+        result = sheet.values().get(spreadsheetId=sheet_id, range=f'{sheet_name}!A:A').execute()
+        next_row = len(result.get('values', [])) + 1
+
+        logger.info(f"Attempting to write data to {sheet_name} at row {next_row}. Data: {data}")
+        result = sheet.values().update(
+            spreadsheetId=sheet_id,
+            range=f'{sheet_name}!A{next_row}:D{next_row}',
+            valueInputOption="RAW", body=body
+        ).execute()
         logger.info(f"Write response: {result}")
     except HttpError as e:
         logger.error(f"An error occurred while writing to the sheet: {e}")
@@ -200,13 +207,10 @@ def main():
         if 'Email' not in input_df.columns:
             input_df['Email'] = ''
 
-        output_data = []
-
         for index, row in input_df.iterrows():
             # Check if the maximum runtime has been reached
             if datetime.now() - start_time > max_runtime:
-                logger.info("Maximum runtime reached. Saving progress and exiting...")
-                write_to_google_sheet(sheet_id, sheet_name, output_data)
+                logger.info("Maximum runtime reached. Exiting...")
                 return
 
             if row['Status'] == 'Done':
@@ -223,21 +227,14 @@ def main():
                     input_df.at[index, 'Status'] = 'Done'  # Mark as done
                     logger.info(f"Appended email for {username}: {email}")
 
-                    # Prepare the row with email to be written to output Google Sheet
-                    output_data.append([row['Username'], row['User ID'], row['Profile URL'], email])
+                    # Write the row with email to the Google Sheet immediately
+                    write_to_google_sheet(sheet_id, sheet_name, [[row['Username'], row['User ID'], row['Profile URL'], email]])
                 else:
                     logger.info(f"No email found for {username}")
 
             except Exception as e:
                 logger.error(f"An error occurred while processing {profile_url}: {e}")
                 continue
-
-        if output_data:
-            # Write all collected data to the output Google Sheet
-            logger.info(f"Writing collected data to output Google Sheet. Data to write: {output_data}")
-            write_to_google_sheet(sheet_id, sheet_name, output_data)
-        else:
-            logger.info("No data to write to the Google Sheet.")
 
     except Exception as e:
         logger.error(f"An error occurred in the main function: {e}")
