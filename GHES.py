@@ -108,8 +108,8 @@ def read_google_sheet(sheet_id, range_name):
         return pd.DataFrame(values[1:], columns=values[0])
     return pd.DataFrame()
 
-# Function to ensure the specified sheet exists, create if not
-def ensure_sheet_exists(sheet_id, sheet_name):
+# Function to ensure the specified sheet exists, create if not, and set up columns
+def ensure_sheet_and_setup_columns(sheet_id, sheet_name):
     creds = Credentials.from_service_account_file('credentials.json')
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
@@ -130,29 +130,41 @@ def ensure_sheet_exists(sheet_id, sheet_name):
                 }]
             }
             sheet.batchUpdate(spreadsheetId=sheet_id, body=add_sheet_request).execute()
+            logger.info(f"Sheet '{sheet_name}' created successfully.")
         else:
             logger.info(f"Sheet '{sheet_name}' already exists.")
-    
+        
+        # Set up the columns if they do not exist
+        logger.info(f"Setting up columns in '{sheet_name}'.")
+        column_headers = [['Username', 'User ID', 'Profile URL', 'Email']]
+        sheet.values().update(
+            spreadsheetId=sheet_id,
+            range=f'{sheet_name}!A1:D1',
+            valueInputOption='RAW',
+            body={'values': column_headers}
+        ).execute()
+        logger.info(f"Columns set up successfully in '{sheet_name}'.")
+
     except HttpError as e:
         logger.error(f"An error occurred while checking or creating the sheet: {e}")
         raise
 
 # Define function to write to Google Sheets
-def write_to_google_sheet(sheet_id, range_name, data):
+def write_to_google_sheet(sheet_id, sheet_name, data):
     creds = Credentials.from_service_account_file('credentials.json')
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
 
-    # Ensure the sheet exists before writing
-    sheet_name = range_name.split('!')[0]
-    ensure_sheet_exists(sheet_id, sheet_name)
+    # Ensure the sheet exists and set up columns before writing
+    ensure_sheet_and_setup_columns(sheet_id, sheet_name)
     
     body = {
         'values': data
     }
     try:
-        result = sheet.values.append(
-            spreadsheetId=sheet_id, range=range_name,
+        logger.info(f"Attempting to write data to {sheet_name}.")
+        result = sheet.values().append(
+            spreadsheetId=sheet_id, range=f'{sheet_name}!A2',
             valueInputOption="RAW", body=body).execute()
         logger.info(f"Write response: {result}")
     except HttpError as e:
@@ -165,9 +177,8 @@ def main():
         logger.info("Starting script...")
 
         # Google Sheets parameters
-        sheet_id = '1rKdG00VihG3zHRQLgQ6NteUHhdQxAqP2reLU8LCFotk'  # Google sheet ID
-        input_range_name = 'Sheet1!A1:C'  # Adjust the range as per your sheet structure
-        output_range_name = 'Sheet2!A1:D'  # Output to a different sheet (Sheet2)
+        sheet_id = '1rKdG00VihG3zHRQLgQ6NteUHhdQxAqP2reLU8LCFotk'  # Replace with your actual sheet ID
+        sheet_name = 'Sheet2'  # Name of the output sheet
 
         start_time = datetime.now()
         max_runtime = timedelta(hours=5, minutes=50)  # Set maximum runtime
@@ -177,7 +188,7 @@ def main():
         github_api_handler = GitHubApiHandler(api_keys)
 
         logger.info("Reading input Google Sheet...")
-        input_df = read_google_sheet(sheet_id, input_range_name)
+        input_df = read_google_sheet(sheet_id, 'Sheet1!A1:C')
 
         if input_df.empty:
             logger.info("No data found in the input Google Sheet.")
@@ -195,7 +206,7 @@ def main():
             # Check if the maximum runtime has been reached
             if datetime.now() - start_time > max_runtime:
                 logger.info("Maximum runtime reached. Saving progress and exiting...")
-                write_to_google_sheet(sheet_id, output_range_name, output_data)
+                write_to_google_sheet(sheet_id, sheet_name, output_data)
                 return
 
             if row['Status'] == 'Done':
@@ -224,7 +235,7 @@ def main():
         if output_data:
             # Write all collected data to the output Google Sheet
             logger.info(f"Writing collected data to output Google Sheet.")
-            write_to_google_sheet(sheet_id, output_range_name, output_data)
+            write_to_google_sheet(sheet_id, sheet_name, output_data)
 
     except Exception as e:
         logger.error(f"An error occurred in the main function: {e}")
