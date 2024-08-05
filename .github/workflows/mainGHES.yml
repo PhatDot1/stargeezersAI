@@ -22,11 +22,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install requests pandas google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
-          sudo apt-get install -y jq  # Install jq if it's not already available
 
-      - name: Setup Google Sheets API Credentials
+      - name: Decode and Setup Google Sheets API Credentials
         run: |
-          echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}" | jq '.' > credentials.json
+          echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS_BASE64 }}" | base64 --decode > credentials.json
 
       - name: Verify credentials.json
         run: |
