@@ -165,7 +165,7 @@ def main():
         logger.info("Starting script...")
 
         # Google Sheets parameters
-        sheet_id = 'your_google_sheet_id'  # Replace with your actual sheet ID
+        sheet_id = '1rKdG00VihG3zHRQLgQ6NteUHhdQxAqP2reLU8LCFotk'  # Google sheet id
         input_range_name = 'Sheet1!A1:C'  # Adjust the range as per your sheet structure
         output_range_name = 'Sheet2!A1:D'  # Output to a different sheet (Sheet2)
 
