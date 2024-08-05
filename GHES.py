@@ -21,7 +21,7 @@ def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500,
     retry = Retry(
         total=retries,
         read=retries,
-        connect=retry.connect,
+        connect=retries,
         backoff_factor=backoff_factor,
         status_forcelist=status_forcelist,
     )
@@ -151,7 +151,7 @@ def write_to_google_sheet(sheet_id, range_name, data):
         'values': data
     }
     try:
-        result = sheet.values().append(
+        result = sheet.values.append(
             spreadsheetId=sheet_id, range=range_name,
             valueInputOption="RAW", body=body).execute()
         logger.info(f"Write response: {result}")
@@ -165,7 +165,7 @@ def main():
         logger.info("Starting script...")
 
         # Google Sheets parameters
-        sheet_id = '1rKdG00VihG3zHRQLgQ6NteUHhdQxAqP2reLU8LCFotk'  # Google sheet id
+        sheet_id = 'your_google_sheet_id'  # Replace with your actual sheet ID
         input_range_name = 'Sheet1!A1:C'  # Adjust the range as per your sheet structure
         output_range_name = 'Sheet2!A1:D'  # Output to a different sheet (Sheet2)
 
