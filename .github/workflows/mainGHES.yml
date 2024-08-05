@@ -25,7 +25,7 @@ jobs:
 
       - name: Setup Google Sheets API Credentials
         run: |
-          echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}" > credentials.json
+          echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}" | jq '.' > credentials.json
 
       - name: Run Python Script
         env:
