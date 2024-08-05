@@ -9,6 +9,7 @@ from requests.packages.urllib3.util.retry import Retry
 from datetime import datetime, timedelta
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
+from googleapiclient.errors import HttpError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +21,7 @@ def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500,
     retry = Retry(
         total=retries,
         read=retries,
-        connect=retries,
+        connect=retry.connect,
         backoff_factor=backoff_factor,
         status_forcelist=status_forcelist,
     )
@@ -107,18 +108,56 @@ def read_google_sheet(sheet_id, range_name):
         return pd.DataFrame(values[1:], columns=values[0])
     return pd.DataFrame()
 
+# Function to ensure the specified sheet exists, create if not
+def ensure_sheet_exists(sheet_id, sheet_name):
+    creds = Credentials.from_service_account_file('credentials.json')
+    service = build('sheets', 'v4', credentials=creds)
+    sheet = service.spreadsheets()
+    
+    try:
+        sheets_metadata = sheet.get(spreadsheetId=sheet_id).execute()
+        sheet_titles = [s['properties']['title'] for s in sheets_metadata['sheets']]
+        
+        if sheet_name not in sheet_titles:
+            logger.info(f"Sheet '{sheet_name}' does not exist. Creating it.")
+            add_sheet_request = {
+                'requests': [{
+                    'addSheet': {
+                        'properties': {
+                            'title': sheet_name
+                        }
+                    }
+                }]
+            }
+            sheet.batchUpdate(spreadsheetId=sheet_id, body=add_sheet_request).execute()
+        else:
+            logger.info(f"Sheet '{sheet_name}' already exists.")
+    
+    except HttpError as e:
+        logger.error(f"An error occurred while checking or creating the sheet: {e}")
+        raise
+
 # Define function to write to Google Sheets
 def write_to_google_sheet(sheet_id, range_name, data):
     creds = Credentials.from_service_account_file('credentials.json')
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
+
+    # Ensure the sheet exists before writing
+    sheet_name = range_name.split('!')[0]
+    ensure_sheet_exists(sheet_id, sheet_name)
+    
     body = {
         'values': data
     }
-    result = sheet.values().append(
-        spreadsheetId=sheet_id, range=range_name,
-        valueInputOption="RAW", body=body).execute()
-    return result
+    try:
+        result = sheet.values().append(
+            spreadsheetId=sheet_id, range=range_name,
+            valueInputOption="RAW", body=body).execute()
+        logger.info(f"Write response: {result}")
+    except HttpError as e:
+        logger.error(f"An error occurred while writing to the sheet: {e}")
+        raise
 
 # Define the main function
 def main():
@@ -126,7 +165,7 @@ def main():
         logger.info("Starting script...")
 
         # Google Sheets parameters
-        sheet_id = '1rKdG00VihG3zHRQLgQ6NteUHhdQxAqP2reLU8LCFotk'  # Google Sheet ID
+        sheet_id = 'your_google_sheet_id'  # Replace with your actual sheet ID
         input_range_name = 'Sheet1!A1:C'  # Adjust the range as per your sheet structure
         output_range_name = 'Sheet2!A1:D'  # Output to a different sheet (Sheet2)
 
