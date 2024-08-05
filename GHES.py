@@ -137,13 +137,13 @@ def ensure_sheet_and_setup_columns(sheet_id, sheet_name):
         # Set up the columns if they do not exist
         logger.info(f"Setting up columns in '{sheet_name}'.")
         column_headers = [['Username', 'User ID', 'Profile URL', 'Email']]
-        sheet.values().update(
+        response = sheet.values().update(
             spreadsheetId=sheet_id,
             range=f'{sheet_name}!A1:D1',
             valueInputOption='RAW',
             body={'values': column_headers}
         ).execute()
-        logger.info(f"Columns set up successfully in '{sheet_name}'.")
+        logger.info(f"Columns set up successfully in '{sheet_name}'. Response: {response}")
 
     except HttpError as e:
         logger.error(f"An error occurred while checking or creating the sheet: {e}")
@@ -162,7 +162,7 @@ def write_to_google_sheet(sheet_id, sheet_name, data):
         'values': data
     }
     try:
-        logger.info(f"Attempting to write data to {sheet_name}.")
+        logger.info(f"Attempting to write data to {sheet_name}. Data: {data}")
         result = sheet.values().append(
             spreadsheetId=sheet_id, range=f'{sheet_name}!A2',
             valueInputOption="RAW", body=body).execute()
@@ -234,8 +234,10 @@ def main():
 
         if output_data:
             # Write all collected data to the output Google Sheet
-            logger.info(f"Writing collected data to output Google Sheet.")
+            logger.info(f"Writing collected data to output Google Sheet. Data to write: {output_data}")
             write_to_google_sheet(sheet_id, sheet_name, output_data)
+        else:
+            logger.info("No data to write to the Google Sheet.")
 
     except Exception as e:
         logger.error(f"An error occurred in the main function: {e}")
