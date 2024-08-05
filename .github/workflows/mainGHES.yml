@@ -27,6 +27,12 @@ jobs:
         run: |
           echo "${{ secrets.GOOGLE_SHEETS_CREDENTIALS_JSON }}" | jq '.' > credentials.json
 
+      - name: Verify credentials.json
+        run: |
+          echo "Checking contents of credentials.json..."
+          cat credentials.json | jq '.client_email'
+          cat credentials.json | jq '.private_key_id'
+
       - name: Run Python Script
         env:
           MY_GITHUB_API_KEYS: ${{ secrets.MY_GITHUB_API_KEYS }}  # GitHub API keys for scraping
