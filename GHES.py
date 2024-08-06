@@ -15,6 +15,8 @@ from googleapiclient.errors import HttpError
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+BATCH_SIZE = 100  # Number of records to process at a time
+
 # Define the retry session function
 def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None):
     session = session or requests.Session()
@@ -170,7 +172,7 @@ def write_to_google_sheet(sheet_id, sheet_name, data):
         logger.info(f"Attempting to write data to {sheet_name} at row {next_row}. Data: {data}")
         result = sheet.values().update(
             spreadsheetId=sheet_id,
-            range=f'{sheet_name}!A{next_row}:D{next_row}',
+            range=f'{sheet_name}!A{next_row}:D{next_row + len(data) - 1}',
             valueInputOption="RAW", body=body
         ).execute()
         logger.info(f"Write response: {result}")
@@ -210,11 +212,12 @@ def main():
         if 'Email' not in input_df.columns:
             input_df['Email'] = ''
 
+        output_data = []
         for index, row in input_df.iterrows():
             # Check if the maximum runtime has been reached
             if datetime.now() - start_time > max_runtime:
                 logger.info("Maximum runtime reached. Exiting...")
-                return
+                break
 
             if row['Status'] == 'Done':
                 continue
@@ -230,14 +233,26 @@ def main():
                     input_df.at[index, 'Status'] = 'Done'  # Mark as done
                     logger.info(f"Appended email for {username}: {email}")
 
-                    # Write the row with email to the Google Sheet immediately
-                    write_to_google_sheet(sheet_id, sheet_name, [[row['Username'], row['User ID'], row['Profile URL'], email]])
+                    # Collect the row data
+                    output_data.append([row['Username'], row['User ID'], row['Profile URL'], email])
+
                 else:
                     logger.info(f"No email found for {username}")
 
             except Exception as e:
                 logger.error(f"An error occurred while processing {profile_url}: {e}")
                 continue
+
+            # Write the data in batches
+            if len(output_data) >= BATCH_SIZE:
+                logger.info(f"Writing batch of {BATCH_SIZE} records to the Google Sheet.")
+                write_to_google_sheet(sheet_id, sheet_name, output_data)
+                output_data = []  # Reset output_data for the next batch
+
+        # Write any remaining data
+        if output_data:
+            logger.info(f"Writing final batch of {len(output_data)} records to the Google Sheet.")
+            write_to_google_sheet(sheet_id, sheet_name, output_data)
 
     except Exception as e:
         logger.error(f"An error occurred in the main function: {e}")
