@@ -190,7 +190,10 @@ def main():
         start_time = datetime.now()
         max_runtime = timedelta(hours=5, minutes=50)  # Set maximum runtime
 
-        api_keys = os.environ['MY_GITHUB_API_KEYS2'].split(',')
+        api_keys = os.getenv('MY_GITHUB_API_KEYS2')
+        if api_keys is None:
+            raise ValueError("Environment variable MY_GITHUB_API_KEYS2 is not set")
+        api_keys = api_keys.split(',')
 
         github_api_handler = GitHubApiHandler(api_keys)
 
